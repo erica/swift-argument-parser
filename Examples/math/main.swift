@@ -207,7 +207,7 @@ extension Math.Statistics {
         var file: String?
         @Option(help: .hidden, completion: .directory)
         var directory: String?
-        @Option(help: .hidden, completion: .custom(customCompletion))
+        @Option(help: "Use a custom completion function", completion: .custom(customCompletion))
         var custom: String?
       
         func validate() throws {
@@ -230,8 +230,39 @@ extension Math.Statistics {
     }
 }
 
-func customCompletion(_ s: String) -> [String] {
-  return s == "a"
+import Foundation
+
+extension String {
+    func appendLine(to url: URL) throws {
+        try self.appending("\n").append(to: url)
+    }
+    func append(to url: URL) throws {
+        let data = self.data(using: String.Encoding.utf8)
+        try data?.append(to: url)
+    }
+}
+
+extension Data {
+    func append(to url: URL) throws {
+        if let fileHandle = try? FileHandle(forWritingTo: url) {
+            defer {
+                fileHandle.closeFile()
+            }
+            fileHandle.seekToEndOfFile()
+            fileHandle.write(self)
+        } else {
+            try write(to: url)
+        }
+    }
+}
+
+func customCompletion(_ s: [String]) -> [String] {
+  let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+  let file = dir.appendingPathComponent("completions.txt")
+  let debug = "\(s.count): \(s.joined(separator: "|"))"
+  try! debug.appendLine(to: file)
+  
+  return (s.last ?? "").starts(with: "a")
     ? ["aardvark", "aaaaalbert"]
     : ["hello", "helicopter", "heliotrope"]
 }
